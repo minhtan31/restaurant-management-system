@@ -1,18 +1,17 @@
 import { configureStore } from '@reduxjs/toolkit'
-// import authSlice from './slices/authSlice'
-// import menuSlice from './slices/menuSlice'
-// import orderSlice from './slices/orderSlice'
-// import tableSlice from './slices/tableSlice'
-// import staffSlice from './slices/staffSlice'
+import authSlice from './slices/authSlice'
+import menuSlice from './slices/menuSlice'
+import orderSlice from './slices/orderSlice'
+import tableSlice from './slices/tableSlice'
+import staffSlice from './slices/staffSlice'
 
 const store = configureStore({
   reducer: {
-    //Ví dụ:
-    // auth: authSlice,
-    // menu: menuSlice,
-    // order: orderSlice,
-    // table: tableSlice,
-    // staff: staffSlice,
+    auth: authSlice,
+    menu: menuSlice,
+    order: orderSlice,
+    table: tableSlice,
+    staff: staffSlice,
   },
 })
 
