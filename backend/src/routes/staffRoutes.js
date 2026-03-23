@@ -7,13 +7,10 @@ const { protect, adminOnly } = require('../middleware/auth')
 const { validate } = require('../middleware/validate')
 const { validateCreateStaff, validateUpdateStaff } = require('../validators/staffValidator')
 
-router.route('/')
-  .get(protect, adminOnly, getStaff)
-  .post(protect, adminOnly, validate(validateCreateStaff), createStaff)
-
-router.route('/:id')
-  .get(protect, adminOnly, getStaffMember)
-  .put(protect, adminOnly, validate(validateUpdateStaff), updateStaff)
-  .delete(protect, adminOnly, deleteStaff)
+router.get('/', protect, adminOnly, getStaff)
+router.post('/', protect, adminOnly, validate(validateCreateStaff), createStaff)
+router.get('/:id', protect, adminOnly, getStaffMember)
+router.put('/:id', protect, adminOnly, validate(validateUpdateStaff), updateStaff)
+router.delete('/:id', protect, adminOnly, deleteStaff)
 
 module.exports = router
