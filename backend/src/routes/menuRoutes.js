@@ -7,13 +7,10 @@ const { protect, adminOnly } = require('../middleware/auth')
 const { validate } = require('../middleware/validate')
 const { validateCreateMenu, validateUpdateMenu } = require('../validators/menuValidator')
 
-router.route('/')
-  .get(getMenuItems)
-  .post(protect, adminOnly, validate(validateCreateMenu), createMenuItem)
-
-router.route('/:id')
-  .get(getMenuItem)
-  .put(protect, adminOnly, validate(validateUpdateMenu), updateMenuItem)
-  .delete(protect, adminOnly, deleteMenuItem)
+router.get('/', getMenuItems)
+router.post('/', protect, adminOnly, validate(validateCreateMenu), createMenuItem)
+router.get('/:id', getMenuItem)
+router.put('/:id', protect, adminOnly, validate(validateUpdateMenu), updateMenuItem)
+router.delete('/:id', protect, adminOnly, deleteMenuItem)
 
 module.exports = router

@@ -1,114 +1,56 @@
-const Table = require('../models/Table')
+const tableService = require('../services/tableService')
 
-// @desc    Get all tables
-// @route   GET /api/tables
-// @access  Private
 const getTables = async (req, res) => {
   try {
-    const { floor, status } = req.query
-    const filter = {}
-    if (floor) filter.floor = parseInt(floor)
-    if (status) filter.status = status
-
-    const tables = await Table.find(filter).sort({ number: 1 })
+    const tables = await tableService.getAll(req.query)
     res.json(tables)
   } catch (error) {
-    res.status(500).json({ message: error.message })
+    res.status(error.statusCode || 500).json({ message: error.message })
   }
 }
 
-// @desc    Get single table
-// @route   GET /api/tables/:id
-// @access  Private
 const getTable = async (req, res) => {
   try {
-    const table = await Table.findById(req.params.id)
-    if (!table) {
-      return res.status(404).json({ message: 'Không tìm thấy bàn' })
-    }
+    const table = await tableService.getById(req.params.id)
     res.json(table)
   } catch (error) {
-    res.status(500).json({ message: error.message })
+    res.status(error.statusCode || 500).json({ message: error.message })
   }
 }
 
-// @desc    Create table
-// @route   POST /api/tables
-// @access  Private (Admin)
 const createTable = async (req, res) => {
   try {
-    // Chỉ cho phép các field hợp lệ
-    const { number, seats, floor, status } = req.body
-    const sanitizedData = { number, seats }
-    if (floor !== undefined) sanitizedData.floor = floor
-    if (status) sanitizedData.status = status
-
-    const table = await Table.create(sanitizedData)
+    const table = await tableService.create(req.body)
     res.status(201).json(table)
   } catch (error) {
-    res.status(500).json({ message: error.message })
+    res.status(error.statusCode || 500).json({ message: error.message })
   }
 }
 
-// @desc    Update table
-// @route   PUT /api/tables/:id
-// @access  Private (Admin)
 const updateTable = async (req, res) => {
   try {
-    // Chỉ cho phép các field hợp lệ
-    const allowedFields = ['number', 'seats', 'floor', 'status']
-    const updateData = {}
-    allowedFields.forEach((field) => {
-      if (req.body[field] !== undefined) {
-        updateData[field] = req.body[field]
-      }
-    })
-
-    const table = await Table.findByIdAndUpdate(req.params.id, updateData, {
-      new: true,
-      runValidators: true,
-    })
-    if (!table) {
-      return res.status(404).json({ message: 'Không tìm thấy bàn' })
-    }
+    const table = await tableService.update(req.params.id, req.body)
     res.json(table)
   } catch (error) {
-    res.status(500).json({ message: error.message })
+    res.status(error.statusCode || 500).json({ message: error.message })
   }
 }
 
-// @desc    Delete table
-// @route   DELETE /api/tables/:id
-// @access  Private (Admin)
 const deleteTable = async (req, res) => {
   try {
-    const table = await Table.findByIdAndDelete(req.params.id)
-    if (!table) {
-      return res.status(404).json({ message: 'Không tìm thấy bàn' })
-    }
-    res.json({ message: 'Đã xóa bàn thành công' })
+    const result = await tableService.remove(req.params.id)
+    res.json(result)
   } catch (error) {
-    res.status(500).json({ message: error.message })
+    res.status(error.statusCode || 500).json({ message: error.message })
   }
 }
 
-// @desc    Update table status
-// @route   PATCH /api/tables/:id/status
-// @access  Private
 const updateTableStatus = async (req, res) => {
   try {
-    const { status } = req.body
-    const table = await Table.findByIdAndUpdate(
-      req.params.id,
-      { status },
-      { new: true, runValidators: true }
-    )
-    if (!table) {
-      return res.status(404).json({ message: 'Không tìm thấy bàn' })
-    }
+    const table = await tableService.updateStatus(req.params.id, req.body.status)
     res.json(table)
   } catch (error) {
-    res.status(500).json({ message: error.message })
+    res.status(error.statusCode || 500).json({ message: error.message })
   }
 }
 

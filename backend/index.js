@@ -1,13 +1,17 @@
 const express = require('express')
 const cors = require('cors')
 const dotenv = require('dotenv')
+
+
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0'
+
 const connectDB = require('./src/config/db')
+const { errorHandler, notFound } = require('./src/middleware/errorHandler')
 
 
-// Load env vars
 dotenv.config()
 
-// Connect to database
+
 connectDB()
 
 const app = express()
@@ -20,6 +24,8 @@ app.use(cors({
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
 
+// Routes
+app.use('/api/auth', require('./src/routes/authRoutes'))
 
 
 // Health check
@@ -31,7 +37,9 @@ app.get('/api/health', (req, res) => {
   })
 })
 
-
+// Error handling
+app.use(notFound)
+app.use(errorHandler)
 
 const PORT = process.env.PORT || 5000
 
