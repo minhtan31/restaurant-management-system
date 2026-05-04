@@ -10,7 +10,6 @@ import {
   TableRestaurant as TableIcon, People as PeopleIcon,
   EventSeat as SeatIcon, Receipt as ReceiptIcon,
   Payment as PaymentIcon, AddCircle as AddCircleIcon,
-  RemoveCircle as RemoveCircleIcon,
 } from '@mui/icons-material'
 import { setTables, addTable, updateTable, deleteTable, setSelectedFloor, setLoading } from '../../store/slices/tableSlice'
 import { setMenuItems } from '../../store/slices/menuSlice'
@@ -42,12 +41,10 @@ const Tables = () => {
   const [openActiveOrder, setOpenActiveOrder] = useState(false)
   const [activeOrder, setActiveOrder] = useState(null)
   const [activeOrderLoading, setActiveOrderLoading] = useState(false)
-  const [addingItems, setAddingItems] = useState([])
-  const [addSelectedMenuItem, setAddSelectedMenuItem] = useState('')
-  const [addQuantity, setAddQuantity] = useState(1)
   const [openPayment, setOpenPayment] = useState(false)
   const [payDiscount, setPayDiscount] = useState(0)
   const [paymentMethod, setPaymentMethod] = useState('cash')
+  const [amountReceived, setAmountReceived] = useState(0)
 
   useEffect(() => {
     const fetchData = async () => {
@@ -106,7 +103,7 @@ const Tables = () => {
       setActiveOrderLoading(true); setOpenActiveOrder(true)
       try {
         const order = await orderService.getActiveByTable(table.number)
-        setActiveOrder(order); setOrderTable(table); setAddingItems([]); setAddSelectedMenuItem(''); setAddQuantity(1)
+        setActiveOrder(order); setOrderTable(table)
       } catch (error) { console.error('Error fetching active order:', error) }
       finally { setActiveOrderLoading(false) }
     }
@@ -130,29 +127,17 @@ const Tables = () => {
     } catch (error) { alert(error.response?.data?.message || 'Lỗi khi tạo đơn hàng') }
   }
 
-  const handleAddItemToActive = () => {
-    const item = menuItems.find(m => m._id === addSelectedMenuItem)
-    if (!item) return
-    const existing = addingItems.find(i => i.menuItem.name === item.name)
-    if (existing) { setAddingItems(addingItems.map(i => i.menuItem.name === item.name ? { ...i, quantity: i.quantity + addQuantity } : i)) }
-    else { setAddingItems([...addingItems, { menuItem: { _id: item._id, name: item.name, price: item.price }, quantity: addQuantity }]) }
-    setAddSelectedMenuItem(''); setAddQuantity(1)
-  }
-
-  const handleSubmitAddItems = async () => {
-    if (addingItems.length === 0 || !activeOrder) return
-    try {
-      const updated = await orderService.addItems(activeOrder._id, addingItems)
-      setActiveOrder(updated); dispatch(updateOrder(updated)); setAddingItems([])
-    } catch (error) { alert(error.response?.data?.message || 'Lỗi khi thêm món') }
-  }
-
-  const handleOpenPayment = () => { setPayDiscount(0); setPaymentMethod('cash'); setOpenPayment(true) }
+  const handleOpenPayment = () => { setPayDiscount(0); setPaymentMethod('cash'); setAmountReceived(0); setOpenPayment(true) }
 
   const handlePay = async () => {
     if (!activeOrder) return
+    const finalAmount = (activeOrder.totalAmount || 0) * (1 - payDiscount / 100)
+    if (paymentMethod === 'cash' && amountReceived > 0 && amountReceived < finalAmount) {
+      alert('Tiền khách đưa không đủ!')
+      return
+    }
     try {
-      const updated = await orderService.pay(activeOrder._id, payDiscount, paymentMethod)
+      const updated = await orderService.pay(activeOrder._id, payDiscount, paymentMethod, paymentMethod === 'cash' ? amountReceived : 0)
       dispatch(updateOrder(updated)); dispatch(updateTable({ ...orderTable, status: 'available' }))
       setOpenPayment(false); setOpenActiveOrder(false)
     } catch (error) { alert(error.response?.data?.message || 'Lỗi khi thanh toán') }
@@ -312,27 +297,7 @@ const Tables = () => {
                 <Typography fontWeight={700} sx={{ color: '#FF6B35' }}>{(activeOrder.totalAmount || 0).toLocaleString('vi-VN')}đ</Typography>
               </Box>
             </Box>
-            <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1, color: '#1E293B' }}>Gọi thêm món:</Typography>
-            <Box sx={{ display: 'flex', gap: 1, mb: 1 }}>
-              <TextField select label="Chọn món" value={addSelectedMenuItem} onChange={e => setAddSelectedMenuItem(e.target.value)} sx={{ flex: 1 }} size="small">
-                {menuItems.filter(m => m.available).map(m => <MenuItem key={m._id} value={m._id}>{m.name} - {m.price?.toLocaleString('vi-VN')}đ</MenuItem>)}
-              </TextField>
-              <TextField label="SL" type="number" value={addQuantity} onChange={e => setAddQuantity(parseInt(e.target.value) || 1)} sx={{ width: 70 }} size="small" />
-              <Button variant="outlined" onClick={handleAddItemToActive} disabled={!addSelectedMenuItem} sx={{ borderColor: '#4ECDC4', color: '#4ECDC4', minWidth: 'auto', px: 2 }}><AddCircleIcon /></Button>
-            </Box>
-            {addingItems.length > 0 && (
-              <Box sx={{ p: 1.5, borderRadius: 3, background: 'rgba(78,205,196,0.04)', border: '1px solid rgba(78,205,196,0.15)', mb: 2 }}>
-                <Typography variant="caption" fontWeight={600} sx={{ color: '#3BAEA7', mb: 0.5, display: 'block' }}>Món thêm (chưa gửi):</Typography>
-                {addingItems.map((item, i) => (
-                  <Box key={i} sx={{ display: 'flex', justifyContent: 'space-between', py: 0.3 }}>
-                    <Typography variant="body2">{item.menuItem.name} x{item.quantity}</Typography>
-                    <Typography variant="body2" fontWeight={600}>{(item.menuItem.price * item.quantity).toLocaleString('vi-VN')}đ</Typography>
-                  </Box>
-                ))}
-                <Button size="small" variant="contained" onClick={handleSubmitAddItems} className="shimmer-btn"
-                  sx={{ mt: 1, background: 'linear-gradient(135deg, #4ECDC4, #3BAEA7)', width: '100%' }}>Gửi thêm món cho bếp</Button>
-              </Box>
-            )}
+            <Typography variant="caption" sx={{ color: '#94A3B8', fontStyle: 'italic', display: 'block' }}>📋 Để thêm món hoặc chỉnh sửa đơn, vui lòng vào trang Đơn hàng.</Typography>
           </>)}
         </DialogContent>
         <DialogActions sx={{ p: 3, justifyContent: 'space-between' }}>
@@ -358,9 +323,15 @@ const Tables = () => {
               <Box sx={{ display: 'flex', justifyContent: 'space-between' }}><Typography fontWeight={700}>Tổng tiền:</Typography><Typography fontWeight={700}>{(activeOrder.totalAmount || 0).toLocaleString('vi-VN')}đ</Typography></Box>
             </Box>
             <TextField fullWidth label="Giảm giá (%)" type="number" value={payDiscount} onChange={e => setPayDiscount(Math.min(100, Math.max(0, parseInt(e.target.value) || 0)))} sx={{ mb: 2 }} size="small" inputProps={{ min: 0, max: 100 }} />
-            <TextField fullWidth select label="Phương thức thanh toán" value={paymentMethod} onChange={e => setPaymentMethod(e.target.value)} sx={{ mb: 2 }} size="small">
+            <TextField fullWidth select label="Phương thức thanh toán" value={paymentMethod} onChange={e => { setPaymentMethod(e.target.value); setAmountReceived(0) }} sx={{ mb: 2 }} size="small">
               <MenuItem value="cash">💵 Tiền mặt</MenuItem><MenuItem value="transfer">🏦 Chuyển khoản</MenuItem><MenuItem value="card">💳 Thẻ</MenuItem>
             </TextField>
+            {paymentMethod === 'cash' && (
+              <TextField fullWidth label="💵 Tiền khách đưa (đ)" type="number" value={amountReceived || ''}
+                onChange={e => setAmountReceived(Math.max(0, parseInt(e.target.value) || 0))}
+                sx={{ mb: 2 }} size="small" inputProps={{ min: 0 }}
+                placeholder="Nhập số tiền khách đưa..." />
+            )}
             <Box sx={{ p: 2.5, borderRadius: 3, background: 'rgba(34,197,94,0.04)', border: '1px solid rgba(34,197,94,0.12)' }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
                 <Typography variant="body2" sx={{ color: '#64748B' }}>Tổng tiền:</Typography>
@@ -371,10 +342,26 @@ const Tables = () => {
                 <Typography variant="body2" sx={{ color: '#EF4444' }}>-{((activeOrder.totalAmount || 0) * payDiscount / 100).toLocaleString('vi-VN')}đ</Typography>
               </Box>}
               <Divider sx={{ my: 1 }} />
-              <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
                 <Typography variant="h6" fontWeight={800} sx={{ color: '#1E293B' }}>Thành tiền:</Typography>
                 <Typography variant="h6" fontWeight={800} sx={{ color: '#22C55E' }}>{((activeOrder.totalAmount || 0) * (1 - payDiscount / 100)).toLocaleString('vi-VN')}đ</Typography>
               </Box>
+              {paymentMethod === 'cash' && amountReceived > 0 && (
+                <>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                    <Typography variant="body2" sx={{ color: '#64748B' }}>Khách đưa:</Typography>
+                    <Typography variant="body2" fontWeight={600} sx={{ color: '#3B82F6' }}>{amountReceived.toLocaleString('vi-VN')}đ</Typography>
+                  </Box>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', p: 1, borderRadius: 2, background: amountReceived >= (activeOrder.totalAmount || 0) * (1 - payDiscount / 100) ? 'rgba(34,197,94,0.08)' : 'rgba(239,68,68,0.08)' }}>
+                    <Typography variant="body2" fontWeight={700} sx={{ color: amountReceived >= (activeOrder.totalAmount || 0) * (1 - payDiscount / 100) ? '#22C55E' : '#EF4444' }}>🔄 Tiền thối:</Typography>
+                    <Typography variant="body2" fontWeight={800} sx={{ color: amountReceived >= (activeOrder.totalAmount || 0) * (1 - payDiscount / 100) ? '#22C55E' : '#EF4444' }}>
+                      {amountReceived >= (activeOrder.totalAmount || 0) * (1 - payDiscount / 100)
+                        ? (amountReceived - (activeOrder.totalAmount || 0) * (1 - payDiscount / 100)).toLocaleString('vi-VN') + 'đ'
+                        : 'Chưa đủ tiền!'}
+                    </Typography>
+                  </Box>
+                </>
+              )}
             </Box>
           </>)}
         </DialogContent>

@@ -11,11 +11,13 @@ const validateCreateMenu = (body) => {
   }
 
   // price - bắt buộc, số >= 0
-  if (body.price === undefined || body.price === null) {
+  // Lưu ý: Khi dùng multipart/form-data, price sẽ là string → parse
+  const price = typeof body.price === 'string' ? Number(body.price) : body.price
+  if (price === undefined || price === null || body.price === '') {
     errors.push('Vui lòng nhập giá')
-  } else if (typeof body.price !== 'number' || isNaN(body.price)) {
+  } else if (typeof price !== 'number' || isNaN(price)) {
     errors.push('Giá phải là một số')
-  } else if (body.price < 0) {
+  } else if (price < 0) {
     errors.push('Giá không được âm')
   }
 
@@ -35,16 +37,15 @@ const validateCreateMenu = (body) => {
     }
   }
 
-  // image - optional, string
-  if (body.image !== undefined && body.image !== null) {
-    if (typeof body.image !== 'string') {
-      errors.push('Link hình ảnh phải là chuỗi ký tự')
-    }
-  }
+  // image - không validate ở đây, do Multer middleware xử lý
+  // Nếu gửi kèm file thì req.file sẽ có, req.body.image sẽ không tồn tại
 
-  // available - optional, boolean
+  // available - optional, boolean hoặc string 'true'/'false' (multipart)
   if (body.available !== undefined && body.available !== null) {
-    if (typeof body.available !== 'boolean') {
+    const available = typeof body.available === 'string'
+      ? (body.available === 'true' || body.available === 'false' ? body.available === 'true' : null)
+      : body.available
+    if (typeof available !== 'boolean') {
       errors.push('Trạng thái có sẵn phải là true hoặc false')
     }
   }
@@ -64,11 +65,12 @@ const validateUpdateMenu = (body) => {
     }
   }
 
-  // price - optional
-  if (body.price !== undefined && body.price !== null) {
-    if (typeof body.price !== 'number' || isNaN(body.price)) {
+  // price - optional (multipart: string → number)
+  if (body.price !== undefined && body.price !== null && body.price !== '') {
+    const price = typeof body.price === 'string' ? Number(body.price) : body.price
+    if (typeof price !== 'number' || isNaN(price)) {
       errors.push('Giá phải là một số')
-    } else if (body.price < 0) {
+    } else if (price < 0) {
       errors.push('Giá không được âm')
     }
   }
@@ -89,16 +91,14 @@ const validateUpdateMenu = (body) => {
     }
   }
 
-  // image - optional
-  if (body.image !== undefined && body.image !== null) {
-    if (typeof body.image !== 'string') {
-      errors.push('Link hình ảnh phải là chuỗi ký tự')
-    }
-  }
+  // image - không validate, do Multer xử lý
 
-  // available - optional
+  // available - optional (multipart: string → boolean)
   if (body.available !== undefined && body.available !== null) {
-    if (typeof body.available !== 'boolean') {
+    const available = typeof body.available === 'string'
+      ? (body.available === 'true' || body.available === 'false' ? body.available === 'true' : null)
+      : body.available
+    if (typeof available !== 'boolean') {
       errors.push('Trạng thái có sẵn phải là true hoặc false')
     }
   }

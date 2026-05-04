@@ -126,6 +126,19 @@ const validatePayOrder = (body) => {
     }
   }
 
+  if (body.paymentMethod !== undefined && body.paymentMethod !== null) {
+    const validMethods = ['cash', 'transfer', 'card']
+    if (!validMethods.includes(body.paymentMethod)) {
+      errors.push('Phương thức thanh toán không hợp lệ (cash, transfer, card)')
+    }
+  }
+
+  if (body.amountReceived !== undefined && body.amountReceived !== null) {
+    if (typeof body.amountReceived !== 'number' || isNaN(body.amountReceived) || body.amountReceived < 0) {
+      errors.push('Tiền khách đưa phải là số không âm')
+    }
+  }
+
   return errors
 }
 

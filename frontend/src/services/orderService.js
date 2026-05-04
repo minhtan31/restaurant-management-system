@@ -31,8 +31,8 @@ const orderService = {
     return response.data
   },
 
-  pay: async (id, discount = 0, paymentMethod = 'cash') => {
-    const response = await axiosRestaurant.post(`/orders/${id}/pay`, { discount, paymentMethod })
+  pay: async (id, discount = 0, paymentMethod = 'cash', amountReceived = 0) => {
+    const response = await axiosRestaurant.post(`/orders/${id}/pay`, { discount, paymentMethod, amountReceived })
     return response.data
   },
 
