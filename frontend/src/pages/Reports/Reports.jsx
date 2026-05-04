@@ -8,6 +8,7 @@ import {
 import {
   TrendingUp as TrendingUpIcon, AttachMoney as MoneyIcon,
   Receipt as ReceiptIcon, RestaurantMenu as MenuIcon,
+  CreditCard as CreditCardIcon,
 } from '@mui/icons-material'
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -233,6 +234,62 @@ const Reports = () => {
           </Card>
         </Grid>
       </Grid>
+
+      {/* Bảng hóa đơn chi tiết */}
+      <Card sx={{ mt: 3 }}>
+        <CardContent sx={{ p: 3 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+            <CreditCardIcon sx={{ color: '#FF6B35' }} />
+            <Typography variant="h6" fontWeight={700} sx={{ color: '#1E293B' }}>Hóa đơn chi tiết</Typography>
+            <Chip label={`${orders.filter(o => o.status === 'completed').length} đơn đã TT`} size="small" sx={{ background: 'rgba(34,197,94,0.08)', color: '#22C55E', fontWeight: 600, ml: 1 }} />
+          </Box>
+          <TableContainer>
+            <Table size="small">
+              <TableHead>
+                <TableRow sx={{ background: '#F8FAFC' }}>
+                  <TableCell sx={{ fontWeight: 700 }}>Mã HĐ</TableCell>
+                  <TableCell sx={{ fontWeight: 700 }}>Bàn</TableCell>
+                  <TableCell sx={{ fontWeight: 700 }}>Thời gian</TableCell>
+                  <TableCell sx={{ fontWeight: 700 }}>Món ăn</TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 700 }}>Tổng tiền</TableCell>
+                  <TableCell align="center" sx={{ fontWeight: 700 }}>Giảm giá</TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 700 }}>Thành tiền</TableCell>
+                  <TableCell align="center" sx={{ fontWeight: 700 }}>PT Thanh toán</TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 700 }}>Khách đưa</TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 700 }}>Tiền thối</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {orders.filter(o => o.status === 'completed').sort((a, b) => new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt)).map((order, idx) => {
+                  const disc = order.discount || 0
+                  const total = order.totalAmount || 0
+                  const finalAmt = total * (1 - disc / 100)
+                  const received = order.amountReceived || 0
+                  const change = order.paymentMethod === 'cash' && received > 0 ? Math.max(0, received - finalAmt) : null
+                  const pmLabel = order.paymentMethod === 'cash' ? '💵 Tiền mặt' : order.paymentMethod === 'transfer' ? '🏦 Chuyển khoản' : order.paymentMethod === 'card' ? '💳 Thẻ' : order.paymentMethod || 'N/A'
+                  return (
+                    <TableRow key={order._id} sx={{ animation: `fadeIn 0.3s ease-out ${idx * 0.02}s both`, '&:hover': { background: '#F8FAFC' } }}>
+                      <TableCell><Typography variant="body2" fontWeight={600} sx={{ fontFamily: 'monospace', color: '#334155' }}>#{order._id?.slice(-6)}</Typography></TableCell>
+                      <TableCell><Chip label={`Bàn ${order.tableNumber}`} size="small" sx={{ background: 'rgba(59,130,246,0.08)', color: '#3B82F6', fontWeight: 600 }} /></TableCell>
+                      <TableCell><Typography variant="caption" sx={{ color: '#94A3B8' }}>{new Date(order.updatedAt || order.createdAt).toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</Typography></TableCell>
+                      <TableCell><Typography variant="body2" sx={{ color: '#64748B', maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{order.items?.map(i => `${i.menuItem?.name} x${i.quantity}`).join(', ')}</Typography></TableCell>
+                      <TableCell align="right"><Typography variant="body2">{total.toLocaleString('vi-VN')}đ</Typography></TableCell>
+                      <TableCell align="center">{disc > 0 ? <Chip label={`-${disc}%`} size="small" sx={{ background: 'rgba(239,68,68,0.08)', color: '#EF4444', fontWeight: 600 }} /> : <Typography variant="caption" sx={{ color: '#CBD5E1' }}>-</Typography>}</TableCell>
+                      <TableCell align="right"><Typography variant="body2" fontWeight={700} sx={{ color: '#FF6B35' }}>{finalAmt.toLocaleString('vi-VN')}đ</Typography></TableCell>
+                      <TableCell align="center"><Typography variant="body2" sx={{ color: '#64748B' }}>{pmLabel}</Typography></TableCell>
+                      <TableCell align="right">{order.paymentMethod === 'cash' && received > 0 ? <Typography variant="body2" sx={{ color: '#3B82F6' }}>{received.toLocaleString('vi-VN')}đ</Typography> : <Typography variant="caption" sx={{ color: '#CBD5E1' }}>-</Typography>}</TableCell>
+                      <TableCell align="right">{change !== null ? <Typography variant="body2" fontWeight={600} sx={{ color: '#22C55E' }}>{change.toLocaleString('vi-VN')}đ</Typography> : <Typography variant="caption" sx={{ color: '#CBD5E1' }}>-</Typography>}</TableCell>
+                    </TableRow>
+                  )
+                })}
+                {orders.filter(o => o.status === 'completed').length === 0 && (
+                  <TableRow><TableCell colSpan={10} align="center" sx={{ py: 3 }}><Typography sx={{ color: '#94A3B8' }}>Chưa có hóa đơn nào được thanh toán</Typography></TableCell></TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </CardContent>
+      </Card>
     </Box>
   )
 }
