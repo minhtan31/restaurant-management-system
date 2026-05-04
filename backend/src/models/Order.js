@@ -47,6 +47,15 @@ const orderSchema = new mongoose.Schema({
     type: String,
     default: 'Nhân viên',
   },
+  paymentMethod: {
+    type: String,
+    enum: ['cash', 'transfer', 'card'],
+    default: 'cash',
+  },
+  amountReceived: {
+    type: Number,
+    default: 0,
+  },
   paidAt: {
     type: Date,
   },
