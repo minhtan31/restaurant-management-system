@@ -53,6 +53,7 @@ const Orders = () => {
   const [payOrder, setPayOrderData] = useState(null)
   const [payDiscount, setPayDiscount] = useState(0)
   const [paymentMethod, setPaymentMethod] = useState('cash')
+  const [amountReceived, setAmountReceived] = useState(0)
   
   const [openReturn, setOpenReturn] = useState(false)
   const [returnOrder, setReturnOrder] = useState(null)
@@ -165,7 +166,7 @@ const Orders = () => {
     catch (error) { alert(error.response?.data?.message || 'Lỗi khi thêm món') }
   }
 
-  const handleOpenPayment = (order) => { setPayOrderData(order); setPayDiscount(0); setPaymentMethod('cash'); setOpenPayment(true) }
+  const handleOpenPayment = (order) => { setPayOrderData(order); setPayDiscount(0); setPaymentMethod('cash'); setAmountReceived(0); setOpenPayment(true) }
 
   const handleOpenReturn = (order) => {
     setReturnOrder(order)
@@ -188,8 +189,13 @@ const Orders = () => {
 
   const handlePaySubmit = async () => {
     if (!payOrder) return
+    const finalAmount = (payOrder.totalAmount || 0) * (1 - payDiscount / 100)
+    if (paymentMethod === 'cash' && amountReceived > 0 && amountReceived < finalAmount) {
+      alert('Tiền khách đưa không đủ!')
+      return
+    }
     try {
-      const updated = await orderService.pay(payOrder._id, payDiscount, paymentMethod)
+      const updated = await orderService.pay(payOrder._id, payDiscount, paymentMethod, paymentMethod === 'cash' ? amountReceived : 0)
       dispatch(updateOrder(updated))
       const updatedTables = await tableService.getAll()
       dispatch(setTables(updatedTables))
@@ -492,9 +498,15 @@ return (
               <Box sx={{ display: 'flex', justifyContent: 'space-between' }}><Typography fontWeight={700}>Tổng tiền:</Typography><Typography fontWeight={700}>{(payOrder.totalAmount || 0).toLocaleString('vi-VN')}đ</Typography></Box>
             </Box>
             <TextField fullWidth label="Giảm giá (%)" type="number" value={payDiscount} onChange={e => setPayDiscount(Math.min(100, Math.max(0, parseInt(e.target.value) || 0)))} sx={{ mb: 2 }} size="small" inputProps={{ min: 0, max: 100 }} />
-            <TextField fullWidth select label="Phương thức thanh toán" value={paymentMethod} onChange={e => setPaymentMethod(e.target.value)} sx={{ mb: 2 }} size="small">
+            <TextField fullWidth select label="Phương thức thanh toán" value={paymentMethod} onChange={e => { setPaymentMethod(e.target.value); setAmountReceived(0) }} sx={{ mb: 2 }} size="small">
               <MenuItem value="cash">💵 Tiền mặt</MenuItem><MenuItem value="transfer">🏦 Chuyển khoản</MenuItem><MenuItem value="card">💳 Thẻ</MenuItem>
             </TextField>
+            {paymentMethod === 'cash' && (
+              <TextField fullWidth label="💵 Tiền khách đưa (đ)" type="number" value={amountReceived || ''}
+                onChange={e => setAmountReceived(Math.max(0, parseInt(e.target.value) || 0))}
+                sx={{ mb: 2 }} size="small" inputProps={{ min: 0 }}
+                placeholder="Nhập số tiền khách đưa..." />
+            )}
             <Box sx={{ p: 2.5, borderRadius: 3, background: 'rgba(34,197,94,0.04)', border: '1px solid rgba(34,197,94,0.12)' }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
                 <Typography variant="body2" sx={{ color: '#64748B' }}>Tổng tiền:</Typography><Typography variant="body2">{(payOrder.totalAmount || 0).toLocaleString('vi-VN')}đ</Typography>
@@ -504,10 +516,26 @@ return (
                 <Typography variant="body2" sx={{ color: '#EF4444' }}>-{((payOrder.totalAmount || 0) * payDiscount / 100).toLocaleString('vi-VN')}đ</Typography>
               </Box>}
               <Divider sx={{ my: 1 }} />
-              <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
                 <Typography variant="h6" fontWeight={800}>Thành tiền:</Typography>
                 <Typography variant="h6" fontWeight={800} sx={{ color: '#22C55E' }}>{((payOrder.totalAmount || 0) * (1 - payDiscount / 100)).toLocaleString('vi-VN')}đ</Typography>
               </Box>
+              {paymentMethod === 'cash' && amountReceived > 0 && (
+                <>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                    <Typography variant="body2" sx={{ color: '#64748B' }}>Khách đưa:</Typography>
+                    <Typography variant="body2" fontWeight={600} sx={{ color: '#3B82F6' }}>{amountReceived.toLocaleString('vi-VN')}đ</Typography>
+                  </Box>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', p: 1, borderRadius: 2, background: amountReceived >= (payOrder.totalAmount || 0) * (1 - payDiscount / 100) ? 'rgba(34,197,94,0.08)' : 'rgba(239,68,68,0.08)' }}>
+                    <Typography variant="body2" fontWeight={700} sx={{ color: amountReceived >= (payOrder.totalAmount || 0) * (1 - payDiscount / 100) ? '#22C55E' : '#EF4444' }}>🔄 Tiền thối:</Typography>
+                    <Typography variant="body2" fontWeight={800} sx={{ color: amountReceived >= (payOrder.totalAmount || 0) * (1 - payDiscount / 100) ? '#22C55E' : '#EF4444' }}>
+                      {amountReceived >= (payOrder.totalAmount || 0) * (1 - payDiscount / 100)
+                        ? (amountReceived - (payOrder.totalAmount || 0) * (1 - payDiscount / 100)).toLocaleString('vi-VN') + 'đ'
+                        : 'Chưa đủ tiền!'}
+                    </Typography>
+                  </Box>
+                </>
+              )}
             </Box>
           </DialogContent>
           <DialogActions sx={{ p: 3 }}>
